@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Engram Memory Universe</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: #fff;
+        }
+
+        #graph {
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* Control Panel */
+        #controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 20px;
+            min-width: 300px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 700;
+        }
+
+        #status {
+            font-size: 0.9rem;
+            opacity: 0.7;
+            margin-bottom: 16px;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 10px 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: white;
+            font-size: 0.9rem;
+            margin-bottom: 12px;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: #667eea;
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.85rem;
+        }
+
+        .stat-value {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: transform 0.2s;
+        }
+
+        button:hover {
+            transform: scale(1.02);
+        }
+
+        /* Legend */
+        #legend {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+            font-size: 0.85rem;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        /* Node Info Panel */
+        #nodeInfo {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 20px;
+            max-width: 350px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: none;
+        }
+
+        #nodeInfo.active {
+            display: block;
+        }
+
+        .node-content {
+            margin: 12px 0;
+            line-height: 1.5;
+            font-size: 0.9rem;
+        }
+
+        .node-metric {
+            display: inline-block;
+            padding: 4px 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            font-size: 0.75rem;
+            margin: 4px;
+        }
+    </style>
+    <script src="//unpkg.com/3d-force-graph"></script>
+</head>
+
+<body>
+    <!-- Control Panel -->
+    <div id="controls">
+        <h1>🧠 Memory Universe</h1>
+        <div id="status">Initializing neural link...</div>
+
+        <input type="text" class="search-box" id="searchBox" placeholder="🔍 Search memories...">
+
+        <div class="stat">
+            <span>Total Memories</span>
+            <span class="stat-value" id="totalNodes">0</span>
+        </div>
+        <div class="stat">
+            <span>Clusters</span>
+            <span class="stat-value" id="totalClusters">0</span>
+        </div>
+        <div class="stat">
+            <span>Connections</span>
+            <span class="stat-value" id="totalLinks">0</span>
+        </div>
+
+        <button onclick="resetCamera()">🎯 Reset Camera</button>
+        <button onclick="toggleParticles()">✨ Toggle Effects</button>
+    </div>
+
+    <!-- Legend -->
+    <div id="legend">
+        <div class="legend-item">
+            <div class="legend-color" style="background: #4ade80;"></div>
+            <span>High Quality (>0.7)</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #fbbf24;"></div>
+            <span>Medium (0.4-0.7)</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #ef4444;"></div>
+            <span>Low (<0.4)< /span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #8b5cf6;"></div>
+            <span>Dream Connection</span>
+        </div>
+    </div>
+
+    <!-- Node Info Panel -->
+    <div id="nodeInfo">
+        <h2 style="font-size: 1.2rem; margin-bottom: 12px;">Memory Details</h2>
+        <div class="node-content" id="nodeContent"></div>
+        <div id="nodeMetrics"></div>
+    </div>
+
+    <div id="graph"></div>
+
+    <script>
+        let graphData = { nodes: [], links: [] };
+        let particlesEnabled = true;
+
+        // Initialize 3D Force Graph
+        const Graph = ForceGraph3D()
+            (document.getElementById('graph'))
+            .backgroundColor('#090a0f')
+            .nodeLabel(node => `
+                <div style="background: rgba(0,0,0,0.9); padding: 8px; border-radius: 4px; max-width: 200px;">
+                    <strong>${node.label}</strong><br>
+                    Quality: ${node.val.toFixed(2)}<br>
+                    Cluster: ${node.group}
+                </div>
+            `)
+            .nodeColor(node => {
+                // Color by quality score
+                if (node.val > 0.7) return '#4ade80'; // Green
+                if (node.val > 0.4) return '#fbbf24'; // Yellow
+                return '#ef4444'; // Red
+            })
+            .nodeVal(node => 3 + node.val * 5) // Size by quality
+            .nodeOpacity(0.9)
+            .linkColor(link => link.type === 'dream_association' ? '#8b5cf6' : '#ffffff')
+            .linkOpacity(0.6)
+            .linkWidth(link => link.type === 'dream_association' ? 2 : 1)
+            .linkDirectionalParticles(link => particlesEnabled ? 2 : 0)
+            .linkDirectionalParticleSpeed(0.005)
+            .linkDirectionalParticleWidth(2)
+            .linkDirectionalParticleColor(() => '#667eea')
+            .onNodeClick(node => {
+                // Show node info
+                showNodeInfo(node);
+
+                // Focus camera
+                const distance = 80;
+                const distRatio = 1 + distance / Math.hypot(node.x, node.y, node.z);
+                Graph.cameraPosition(
+                    { x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio },
+                    node,
+                    2000
+                );
+            })
+            .onNodeHover(node => {
+                document.body.style.cursor = node ? 'pointer' : 'default';
+            });
+
+        // Load Memory Data
+        async function loadMemory() {
+            try {
+                document.getElementById('status').innerText = "Loading memories...";
+
+                // Fetch nodes
+                const nodesRes = await fetch('/api/abstractions');
+                const nodes = await nodesRes.json();
+
+                // Fetch links (graph connections)
+                let links = [];
+                try {
+                    const linksRes = await fetch('/api/graph/all_links');
+                    links = await linksRes.json();
+                } catch (e) {
+                    console.log("No links endpoint yet");
+                }
+
+                graphData = { nodes, links };
+                Graph.graphData(graphData);
+
+                // Update stats
+                const clusters = new Set(nodes.map(n => n.group)).size;
+                document.getElementById('totalNodes').textContent = nodes.length;
+                document.getElementById('totalClusters').textContent = clusters;
+                document.getElementById('totalLinks').textContent = links.length;
+                document.getElementById('status').innerText = `🟢 Active: ${nodes.length} memories`;
+
+            } catch (e) {
+                document.getElementById('status').innerText = "⚠️ Core Offline";
+                console.error(e);
+            }
+        }
+
+        // Search Functionality
+        document.getElementById('searchBox').addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+
+            if (!query) {
+                // Reset all nodes
+                Graph.nodeColor(node => {
+                    if (node.val > 0.7) return '#4ade80';
+                    if (node.val > 0.4) return '#fbbf24';
+                    return '#ef4444';
+                });
+                return;
+            }
+
+            // Highlight matching nodes
+            Graph.nodeColor(node => {
+                const matches = node.label.toLowerCase().includes(query);
+                if (matches) return '#00ffff'; // Cyan highlight
+                return '#333333'; // Dim others
+            });
+        });
+
+        // Show Node Info
+        function showNodeInfo(node) {
+            const panel = document.getElementById('nodeInfo');
+            const content = document.getElementById('nodeContent');
+            const metrics = document.getElementById('nodeMetrics');
+
+            content.innerHTML = node.label;
+            metrics.innerHTML = `
+                <span class="node-metric">Quality: ${node.val.toFixed(3)}</span>
+                <span class="node-metric">Cluster: ${node.group.slice(0, 8)}</span>
+            `;
+
+            panel.classList.add('active');
+
+            // Hide after 5s
+            setTimeout(() => panel.classList.remove('active'), 5000);
+        }
+
+        // Reset Camera
+        function resetCamera() {
+            Graph.cameraPosition({ x: 0, y: 0, z: 300 }, { x: 0, y: 0, z: 0 }, 1500);
+        }
+
+        // Toggle Particles
+        function toggleParticles() {
+            particlesEnabled = !particlesEnabled;
+            Graph.linkDirectionalParticles(link => particlesEnabled ? 2 : 0);
+        }
+
+        // Initialize
+        loadMemory();
+        setInterval(loadMemory, 30000); // Refresh every 30s
+
+        // WebSocket for live updates
+        const ws = new WebSocket(`ws://${location.host}/ws`);
+        ws.onopen = () => console.log("✅ Neural link established");
+        ws.onmessage = (event) => {
+            console.log("Pulse:", event.data);
+            // Could reload data here for real-time updates
+        };
+    </script>
+</body>
+
+</html>

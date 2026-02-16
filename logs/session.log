@@ -1,0 +1,4 @@
+2026-02-16 18:03:02,423 - chromadb.telemetry.product.posthog - INFO - Anonymized telemetry enabled. See                     https://docs.trychroma.com/telemetry for more information.
+2026-02-16 18:03:02,528 - sentence_transformers.SentenceTransformer - INFO - Use pytorch device_name: cuda:0
+2026-02-16 18:03:02,528 - sentence_transformers.SentenceTransformer - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2026-02-16 18:04:03,647 - core.abstraction_manager - INFO - Created abstraction 68af1246

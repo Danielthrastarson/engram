@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Engram Control Center</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .subtitle {
+            opacity: 0.9;
+            margin-bottom: 30px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .card h2 {
+            font-size: 1.5rem;
+            margin-bottom: 16px;
+        }
+
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            margin: 12px 0;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4ade80, #22c55e);
+            transition: width 0.3s;
+        }
+
+        button {
+            background: linear-gradient(135deg, #10b981, #059669);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: transform 0.2s;
+            margin: 8px 4px;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        .dream-log {
+            max-height: 300px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        .dream-item {
+            padding: 12px;
+            margin: 8px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .salience-slider {
+            width: 100%;
+            margin: 16px 0;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: rgba(0, 0, 0, 0.3);
+            outline: none;
+        }
+
+        #searchBox {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 1rem;
+            margin-bottom: 16px;
+        }
+
+        #searchBox::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .memory-item {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .memory-item:hover {
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            background: rgba(255, 255, 255, 0.2);
+            margin-right: 8px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🧠 Engram Control Center</h1>
+        <p class="subtitle">Evolution Dashboard & System Control</p>
+
+        <div class="grid">
+            <!-- Evolution Status -->
+            <div class="card">
+                <h2>🧬 Evolution Status</h2>
+                <div class="metric">
+                    <span>Current Level</span>
+                    <span class="metric-value" id="currentLevel">-</span>
+                </div>
+                <div class="metric">
+                    <span>Total Abstractions</span>
+                    <span class="metric-value" id="totalAbs">-</span>
+                </div>
+                <div class="metric">
+                    <span>Avg Quality</span>
+                    <span class="metric-value" id="avgQuality">-</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="qualityProgress" style="width: 0%"></div>
+                </div>
+                <button onclick="refreshEvolution()">🔄 Refresh</button>
+                <button onclick="applyUpgrade(2)">⬆️ Apply Level 2</button>
+            </div>
+
+            <!-- Dream Mode -->
+            <div class="card">
+                <h2>😴 Dream Mode</h2>
+                <div class="metric">
+                    <span>Total Dreams</span>
+                    <span class="metric-value" id="dreamCount">-</span>
+                </div>
+                <button onclick="triggerDream()">✨ Trigger Dream Now</button>
+                <div class="dream-log" id="dreamLog">
+                    <p style="opacity: 0.6;">Dream history will appear here...</p>
+                </div>
+            </div>
+
+            <!-- Salience Control -->
+            <div class="card">
+                <h2>💖 Salience Control</h2>
+                <p style="opacity: 0.8; margin-bottom: 16px;">Adjust emotional importance of memories</p>
+                <input type="text" id="searchBox" placeholder="🔍 Search memories...">
+                <div id="memoryList" style="max-height: 300px; overflow-y: auto;">
+                    <p style="opacity: 0.6;">Search to edit salience...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000/api';
+
+        async function refreshEvolution() {
+            const res = await fetch(`${API_BASE}/evolution/status`);
+            const data = await res.json();
+
+            document.getElementById('currentLevel').textContent = data.level;
+            document.getElementById('totalAbs').textContent = data.metrics.total_abstractions;
+            document.getElementById('avgQuality').textContent = data.metrics.avg_quality.toFixed(2);
+            document.getElementById('dreamCount').textContent = data.metrics.dream_insights;
+
+            const qualityPercent = (data.metrics.avg_quality / 1.0) * 100;
+            document.getElementById('qualityProgress').style.width = qualityPercent + '%';
+        }
+
+        async function applyUpgrade(level) {
+            const res = await fetch(`${API_BASE}/evolution/upgrade/${level}`, { method: 'POST' });
+            const data = await res.json();
+            alert(data.message);
+            refreshEvolution();
+        }
+
+        async function triggerDream() {
+            const btn = event.target;
+            btn.textContent = '💭 Dreaming...';
+            btn.disabled = true;
+
+            await fetch(`${API_BASE}/dream/trigger`, { method: 'POST' });
+
+            btn.textContent = '✨ Trigger Dream Now';
+            btn.disabled = false;
+
+            loadDreamHistory();
+        }
+
+        async function loadDreamHistory() {
+            const res = await fetch(`${API_BASE}/dream/history`);
+            const dreams = await res.json();
+
+            const log = document.getElementById('dreamLog');
+            log.innerHTML = dreams.map(d => `
+                <div class="dream-item">
+                    <strong>Connection:</strong><br>
+                    "${d.source.content}" ↔️ "${d.target.content}"
+                </div>
+            `).join('');
+        }
+
+        let searchTimeout;
+        document.getElementById('searchBox').addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => searchMemories(e.target.value), 300);
+        });
+
+        async function searchMemories(query) {
+            if (!query) return;
+
+            const res = await fetch(`${API_BASE}/memory/search?q=${encodeURIComponent(query)}`);
+            const memories = await res.json();
+
+            const list = document.getElementById('memoryList');
+            list.innerHTML = memories.map(m => `
+                <div class="memory-item">
+                    <div>${m.content.substring(0, 80)}...</div>
+                    <span class="badge">Q: ${m.quality_score.toFixed(2)}</span>
+                    <span class="badge">S: ${m.salience ? m.salience.toFixed(1) : '1.0'}</span>
+                    <input type="range" min="0.5" max="2.0" step="0.1" value="${m.salience || 1.0}" 
+                           onchange="updateSalience('${m.id}', this.value)">
+                </div>
+            `).join('');
+        }
+
+        async function updateSalience(id, value) {
+            await fetch(`${API_BASE}/abstraction/${id}/salience?salience=${value}`, { method: 'PUT' });
+        }
+
+        // Auto-refresh every 5s
+        setInterval(refreshEvolution, 5000);
+        refreshEvolution();
+        loadDreamHistory();
+    </script>
+</body>
+
+</html>
