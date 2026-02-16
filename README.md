@@ -2,22 +2,24 @@
 
 **A truth-enforced, brain-inspired modular memory system.**
 
-Every layer (retrieval, subconscious dreaming, cognitive refinement, self-evolution) is wired together with one unbreakable rule: **Never allow dishonesty**.
+Every layer — retrieval, subconscious dreaming, cognitive refinement, and self-evolution — is connected by one unbreakable rule:  
+**Never allow dishonesty.**
 
-We call it **The North Star** — maximum epistemic honesty. When confidence is low, the system must admit it clearly instead of hallucinating.
+We call it **The North Star** — maximum epistemic honesty. When memory confidence is low, the system must say so clearly instead of hallucinating.
 
-### Core Features
-- Aggressive abstraction compression + quality-based survival
-- Subconscious Dream Mode
-- Self-evolution (system upgrades its own architecture)
-- Central TruthGuard that enforces honesty across all layers
+### Core Innovations
+- Aggressive abstraction compression with quality-based survival
+- Exponential decay + smart pruning (with orphan protection)
+- Subconscious "Dream Mode" for creative recombination
+- Self-evolution system (automatically upgrades its own architecture)
 - Hyperfocus semantic router ("Color" system)
+- Central **TruthGuard** — enforces honesty across all layers
 
-Built for maximum truth-seeking AI.
+Built from first principles to create AI memory that stays truthful as it grows, dreams, and evolves.
 
-**Status**: Actively developed. Seeking feedback from the truth-seeking community (especially xAI).
+**Goal**: Contribute to maximum truth-seeking systems (aligned with xAI's mission).
 
-## Quick Start
+### Quick Start
 ```bash
 cd engram-system
 python -m venv venv
