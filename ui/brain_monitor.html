@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧠 Brain Monitor — Engram Cortex</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0e1a;
+            --bg-card: rgba(15, 23, 42, 0.85);
+            --bg-card-hover: rgba(20, 30, 55, 0.95);
+            --border: rgba(99, 102, 241, 0.2);
+            --border-active: rgba(99, 102, 241, 0.5);
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --text-dim: #475569;
+            --accent-blue: #6366f1;
+            --accent-cyan: #22d3ee;
+            --accent-green: #4ade80;
+            --accent-amber: #fbbf24;
+            --accent-red: #f87171;
+            --accent-purple: #a78bfa;
+            --glow-blue: rgba(99, 102, 241, 0.3);
+            --glow-green: rgba(74, 222, 128, 0.3);
+            --glow-red: rgba(248, 113, 113, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Animated grid background */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                radial-gradient(circle at 20% 50%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(34, 211, 238, 0.06) 0%, transparent 50%),
+                radial-gradient(circle at 50% 80%, rgba(168, 85, 247, 0.05) 0%, transparent 50%);
+            z-index: -1;
+        }
+
+        .header {
+            padding: 24px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(20px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(10, 14, 26, 0.8);
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-status {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .heartbeat-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--accent-green);
+            animation: pulse-glow 1s ease-in-out infinite;
+        }
+
+        .heartbeat-indicator.dead {
+            background: var(--text-dim);
+            animation: none;
+        }
+
+        .heartbeat-indicator.error {
+            background: var(--accent-red);
+            animation: pulse-glow-red 0.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse-glow {
+
+            0%,
+            100% {
+                box-shadow: 0 0 4px var(--glow-green);
+                transform: scale(1);
+            }
+
+            50% {
+                box-shadow: 0 0 16px var(--glow-green);
+                transform: scale(1.2);
+            }
+        }
+
+        @keyframes pulse-glow-red {
+
+            0%,
+            100% {
+                box-shadow: 0 0 4px var(--glow-red);
+            }
+
+            50% {
+                box-shadow: 0 0 20px var(--glow-red);
+            }
+        }
+
+        .header-meta {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 24px 32px;
+        }
+
+        /* Status bar */
+        .status-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            border-color: var(--border-active);
+            transform: translateY(-2px);
+        }
+
+        .stat-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 1.6rem;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .stat-value.green {
+            color: var(--accent-green);
+        }
+
+        .stat-value.blue {
+            color: var(--accent-cyan);
+        }
+
+        .stat-value.amber {
+            color: var(--accent-amber);
+        }
+
+        .stat-value.red {
+            color: var(--accent-red);
+        }
+
+        .stat-value.purple {
+            color: var(--accent-purple);
+        }
+
+        .stat-sub {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            margin-top: 2px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Chart grid */
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(460px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .chart-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+            transition: border-color 0.3s;
+        }
+
+        .chart-card:hover {
+            border-color: var(--border-active);
+        }
+
+        .chart-title {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chart-live-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        canvas {
+            width: 100%;
+            height: 120px;
+            border-radius: 8px;
+        }
+
+        /* Mode indicator */
+        .mode-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .mode-idle {
+            background: rgba(74, 222, 128, 0.15);
+            color: var(--accent-green);
+            border: 1px solid rgba(74, 222, 128, 0.3);
+        }
+
+        .mode-thinking {
+            background: rgba(251, 191, 36, 0.15);
+            color: var(--accent-amber);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+        }
+
+        .mode-focused {
+            background: rgba(248, 113, 113, 0.15);
+            color: var(--accent-red);
+            border: 1px solid rgba(248, 113, 113, 0.3);
+        }
+
+        .mode-sleeping {
+            background: rgba(71, 85, 105, 0.15);
+            color: var(--text-dim);
+            border: 1px solid rgba(71, 85, 105, 0.3);
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+
+        .btn {
+            font-family: 'Inter', sans-serif;
+            padding: 8px 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            border-color: var(--accent-blue);
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .btn.active {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: var(--accent-blue);
+        }
+
+        .btn.danger {
+            border-color: rgba(248, 113, 113, 0.3);
+        }
+
+        .btn.danger:hover {
+            background: rgba(248, 113, 113, 0.1);
+            border-color: var(--accent-red);
+        }
+
+        /* Alert banner */
+        .alert-banner {
+            background: rgba(248, 113, 113, 0.1);
+            border: 1px solid rgba(248, 113, 113, 0.3);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 16px;
+            display: none;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .alert-banner.visible {
+            display: flex;
+        }
+
+        .alert-icon {
+            font-size: 1.3rem;
+        }
+
+        .alert-text {
+            font-size: 0.85rem;
+            color: var(--accent-red);
+        }
+
+        /* Event log */
+        .event-log {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        .event-log .event {
+            padding: 2px 0;
+        }
+
+        .event-log .event-time {
+            color: var(--text-dim);
+        }
+
+        .event-log .event-info {
+            color: var(--accent-cyan);
+        }
+
+        .event-log .event-warn {
+            color: var(--accent-amber);
+        }
+
+        .event-log .event-error {
+            color: var(--accent-red);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 12px 16px;
+            }
+
+            .chart-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .status-bar {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header class="header">
+        <h1>🧠 Brain Monitor</h1>
+        <div class="header-status">
+            <div class="heartbeat-indicator dead" id="heartbeatDot"></div>
+            <span class="header-meta" id="headerTick">Tick: 0</span>
+            <span class="header-meta" id="headerUptime">Uptime: 0s</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Alert Banner -->
+        <div class="alert-banner" id="alertBanner">
+            <span class="alert-icon">🚨</span>
+            <span class="alert-text" id="alertText">Circuit breaker tripped!</span>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <button class="btn" id="btnStart" onclick="startHeartbeat()">▶ Start Heartbeat</button>
+            <button class="btn danger" id="btnStop" onclick="stopHeartbeat()">⏹ Stop</button>
+            <button class="btn" onclick="fetchSnapshot()">🔄 Refresh Now</button>
+        </div>
+
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <div class="stat-card">
+                <div class="stat-label">Engine Mode</div>
+                <div id="modeDisplay"><span class="mode-badge mode-sleeping">😴 sleeping</span></div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Hz (Speed)</div>
+                <div class="stat-value blue" id="hzValue">0.0</div>
+                <div class="stat-sub" id="hzRange">range: 0.5 – 60</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Engrams</div>
+                <div class="stat-value green" id="engramCount">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Avg Quality</div>
+                <div class="stat-value amber" id="avgQuality">0.00</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Avg Consistency</div>
+                <div class="stat-value purple" id="avgConsistency">0.00</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Proofs Generated</div>
+                <div class="stat-value green" id="proofsTotal">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Axiom Derived</div>
+                <div class="stat-value blue" id="axiomCount">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Error Rate</div>
+                <div class="stat-value" id="errorRate" style="color: var(--accent-green)">0.0</div>
+                <div class="stat-sub">per tick</div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="chart-grid">
+            <div class="chart-card">
+                <div class="chart-title">
+                    <span>⚡ Engine Hz (Speed)</span>
+                    <span class="chart-live-value blue" id="chartHzLive">0.0 Hz</span>
+                </div>
+                <canvas id="chartHz" height="120"></canvas>
+            </div>
+
+            <div class="chart-card">
+                <div class="chart-title">
+                    <span>📊 Avg Quality vs Consistency</span>
+                    <span class="chart-live-value green" id="chartQualLive">Q:0 C:0</span>
+                </div>
+                <canvas id="chartQuality" height="120"></canvas>
+            </div>
+
+            <div class="chart-card">
+                <div class="chart-title">
+                    <span>🧠 Total Engrams</span>
+                    <span class="chart-live-value amber" id="chartEngramLive">0</span>
+                </div>
+                <canvas id="chartEngrams" height="120"></canvas>
+            </div>
+
+            <div class="chart-card">
+                <div class="chart-title">
+                    <span>🔬 Proofs & Refinements</span>
+                    <span class="chart-live-value purple" id="chartProofLive">P:0 R:0</span>
+                </div>
+                <canvas id="chartProofs" height="120"></canvas>
+            </div>
+        </div>
+
+        <!-- Event Log -->
+        <div class="chart-card" style="margin-bottom: 24px;">
+            <div class="chart-title"><span>📋 Event Log</span></div>
+            <div class="event-log" id="eventLog">
+                <div class="event"><span class="event-time">[--:--:--]</span> Waiting for heartbeat...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API = window.location.origin + '/api';
+        const MAX_POINTS = 120;  // 2 minutes of data at 1 Hz
+
+        // Time-series buffers
+        const series = {
+            hz: [],
+            quality: [],
+            consistency: [],
+            engrams: [],
+            proofs: [],
+            refinements: [],
+            errors: [],
+            queue: [],
+        };
+
+        let ws = null;
+        let connected = false;
+
+        // ============================================
+        // WEBSOCKET CONNECTION
+        // ============================================
+        function connectWS() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${protocol}//${window.location.host}/ws/brain`);
+
+            ws.onopen = () => {
+                connected = true;
+                document.getElementById('heartbeatDot').className = 'heartbeat-indicator';
+                addLog('info', 'WebSocket connected — live streaming active');
+            };
+
+            ws.onmessage = (e) => {
+                const data = JSON.parse(e.data);
+                if (data.type === 'brain_tick') {
+                    handleTick(data.snapshot, data.health);
+                }
+            };
+
+            ws.onclose = () => {
+                connected = false;
+                document.getElementById('heartbeatDot').className = 'heartbeat-indicator dead';
+                addLog('warn', 'WebSocket disconnected — retrying in 3s');
+                setTimeout(connectWS, 3000);
+            };
+
+            ws.onerror = () => {
+                addLog('error', 'WebSocket error');
+            };
+        }
+
+        // ============================================
+        // HANDLE INCOMING TICK
+        // ============================================
+        function handleTick(snap, health) {
+            // Update header
+            document.getElementById('headerTick').textContent = `Tick: ${snap.tick}`;
+            document.getElementById('headerUptime').textContent = `Uptime: ${Math.round(health.uptime_seconds)}s`;
+
+            // Update status cards
+            updateMode(snap.awake_mode);
+            document.getElementById('hzValue').textContent = snap.awake_hz.toFixed(1);
+            document.getElementById('engramCount').textContent = snap.total_engrams;
+            document.getElementById('avgQuality').textContent = snap.avg_quality.toFixed(3);
+            document.getElementById('avgConsistency').textContent = snap.avg_consistency.toFixed(3);
+            document.getElementById('proofsTotal').textContent = snap.proofs_total;
+            document.getElementById('axiomCount').textContent = snap.axiom_derived_count;
+
+            // Error rate coloring
+            const errEl = document.getElementById('errorRate');
+            errEl.textContent = health.error_rate.toFixed(1);
+            errEl.style.color = health.error_rate > 2 ? 'var(--accent-red)' :
+                health.error_rate > 0.5 ? 'var(--accent-amber)' : 'var(--accent-green)';
+
+            // Circuit breaker alert
+            const alert = document.getElementById('alertBanner');
+            if (health.halted) {
+                alert.classList.add('visible');
+                document.getElementById('alertText').textContent = health.halt_reason;
+                document.getElementById('heartbeatDot').className = 'heartbeat-indicator error';
+            } else {
+                alert.classList.remove('visible');
+            }
+
+            // Push to time-series
+            pushSeries('hz', snap.awake_hz);
+            pushSeries('quality', snap.avg_quality);
+            pushSeries('consistency', snap.avg_consistency);
+            pushSeries('engrams', snap.total_engrams);
+            pushSeries('proofs', snap.proofs_total);
+            pushSeries('refinements', snap.refinements_total);
+            pushSeries('errors', snap.errors_total);
+            pushSeries('queue', snap.awake_queue);
+
+            // Update chart live values
+            document.getElementById('chartHzLive').textContent = `${snap.awake_hz.toFixed(1)} Hz`;
+            document.getElementById('chartQualLive').textContent = `Q:${snap.avg_quality.toFixed(2)} C:${snap.avg_consistency.toFixed(2)}`;
+            document.getElementById('chartEngramLive').textContent = snap.total_engrams;
+            document.getElementById('chartProofLive').textContent = `P:${snap.proofs_total} R:${snap.refinements_total}`;
+
+            // Redraw all charts
+            drawChart('chartHz', [{ data: series.hz, color: '#22d3ee', label: 'Hz' }], 0, 65);
+            drawChart('chartQuality', [
+                { data: series.quality, color: '#4ade80', label: 'Quality' },
+                { data: series.consistency, color: '#a78bfa', label: 'Consistency' },
+            ], 0, 1.05);
+            drawChart('chartEngrams', [{ data: series.engrams, color: '#fbbf24', label: 'Engrams' }]);
+            drawChart('chartProofs', [
+                { data: series.proofs, color: '#a78bfa', label: 'Proofs' },
+                { data: series.refinements, color: '#22d3ee', label: 'Refinements' },
+            ]);
+        }
+
+        function pushSeries(key, value) {
+            series[key].push(value);
+            if (series[key].length > MAX_POINTS) series[key].shift();
+        }
+
+        // ============================================
+        // CANVAS CHART RENDERER
+        // ============================================
+        function drawChart(canvasId, datasets, minY = null, maxY = null) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+
+            // HiDPI scaling
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+
+            const W = rect.width;
+            const H = rect.height;
+            const padding = { top: 8, right: 8, bottom: 4, left: 8 };
+            const chartW = W - padding.left - padding.right;
+            const chartH = H - padding.top - padding.bottom;
+
+            // Clear
+            ctx.clearRect(0, 0, W, H);
+
+            // Auto scale
+            let allVals = datasets.flatMap(d => d.data);
+            if (allVals.length === 0) return;
+
+            let yMin = minY !== null ? minY : Math.min(...allVals) * 0.9;
+            let yMax = maxY !== null ? maxY : Math.max(...allVals) * 1.1;
+            if (yMin === yMax) { yMin -= 1; yMax += 1; }
+
+            // Grid lines
+            ctx.strokeStyle = 'rgba(99, 102, 241, 0.08)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 4; i++) {
+                const y = padding.top + (chartH / 4) * i;
+                ctx.beginPath();
+                ctx.moveTo(padding.left, y);
+                ctx.lineTo(W - padding.right, y);
+                ctx.stroke();
+            }
+
+            // Draw each dataset
+            for (const ds of datasets) {
+                const data = ds.data;
+                if (data.length < 2) continue;
+
+                const step = chartW / (MAX_POINTS - 1);
+
+                // Line
+                ctx.strokeStyle = ds.color;
+                ctx.lineWidth = 2;
+                ctx.lineJoin = 'round';
+                ctx.beginPath();
+
+                const startIdx = MAX_POINTS - data.length;
+                for (let i = 0; i < data.length; i++) {
+                    const x = padding.left + (startIdx + i) * step;
+                    const y = padding.top + chartH - ((data[i] - yMin) / (yMax - yMin)) * chartH;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+
+                // Glow fill under line
+                ctx.lineTo(padding.left + (startIdx + data.length - 1) * step, padding.top + chartH);
+                ctx.lineTo(padding.left + startIdx * step, padding.top + chartH);
+                ctx.closePath();
+                const grad = ctx.createLinearGradient(0, padding.top, 0, padding.top + chartH);
+                grad.addColorStop(0, ds.color.replace(')', ', 0.15)').replace('rgb', 'rgba'));
+                grad.addColorStop(1, 'transparent');
+                ctx.fillStyle = grad;
+                ctx.fill();
+
+                // Current value dot
+                const lastX = padding.left + (startIdx + data.length - 1) * step;
+                const lastY = padding.top + chartH - ((data[data.length - 1] - yMin) / (yMax - yMin)) * chartH;
+                ctx.beginPath();
+                ctx.arc(lastX, lastY, 3, 0, Math.PI * 2);
+                ctx.fillStyle = ds.color;
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(lastX, lastY, 6, 0, Math.PI * 2);
+                ctx.fillStyle = ds.color.replace(')', ', 0.2)').replace('rgb', 'rgba');
+                ctx.fill();
+            }
+        }
+
+        // ============================================
+        // MODE DISPLAY
+        // ============================================
+        function updateMode(mode) {
+            const emojis = { idle: '💤', thinking: '🤔', focused: '🔥', sleeping: '😴' };
+            const el = document.getElementById('modeDisplay');
+            el.innerHTML = `<span class="mode-badge mode-${mode}">${emojis[mode] || '❓'} ${mode}</span>`;
+        }
+
+        // ============================================
+        // EVENT LOG
+        // ============================================
+        function addLog(level, msg) {
+            const log = document.getElementById('eventLog');
+            const time = new Date().toLocaleTimeString();
+            const cls = level === 'info' ? 'event-info' : level === 'warn' ? 'event-warn' : 'event-error';
+            const div = document.createElement('div');
+            div.className = 'event';
+            div.innerHTML = `<span class="event-time">[${time}]</span> <span class="${cls}">${msg}</span>`;
+            log.prepend(div);
+            // Keep max 50 entries
+            while (log.children.length > 50) log.removeChild(log.lastChild);
+        }
+
+        // ============================================
+        // CONTROLS
+        // ============================================
+        async function startHeartbeat() {
+            await fetch(`${API}/brain/start`, { method: 'POST' });
+            addLog('info', 'Heartbeat start requested');
+        }
+
+        async function stopHeartbeat() {
+            await fetch(`${API}/brain/stop`, { method: 'POST' });
+            addLog('warn', 'Heartbeat stop requested');
+        }
+
+        async function fetchSnapshot() {
+            try {
+                const res = await fetch(`${API}/brain/snapshot`);
+                const data = await res.json();
+                handleTick(data.snapshot, data.health);
+                addLog('info', 'Manual snapshot fetched');
+            } catch (e) {
+                addLog('error', `Fetch failed: ${e.message}`);
+            }
+        }
+
+        // ============================================
+        // INIT
+        // ============================================
+        // Try WebSocket first, fallback to polling
+        connectWS();
+
+        // Also poll every 2s as fallback
+        setInterval(async () => {
+            if (!connected) {
+                try { await fetchSnapshot(); } catch (e) { /* silent */ }
+            }
+        }, 2000);
+    </script>
+</body>
+
+</html>

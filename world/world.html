@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Engram World — Embodied AI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a0f;
+            overflow: hidden;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            color: #e0e0e0;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        /* HUD Overlay */
+        #hud {
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        .hud-panel {
+            background: rgba(10, 10, 20, 0.85);
+            border: 1px solid rgba(100, 200, 255, 0.3);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            backdrop-filter: blur(10px);
+            min-width: 240px;
+        }
+
+        .hud-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #64c8ff;
+            margin-bottom: 6px;
+        }
+
+        .hud-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            line-height: 1.8;
+        }
+
+        .hud-label {
+            color: #8899aa;
+        }
+
+        .hud-value {
+            color: #ffffff;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .hud-value.good {
+            color: #4dff88;
+        }
+
+        .hud-value.warn {
+            color: #ffaa44;
+        }
+
+        .hud-value.bad {
+            color: #ff4466;
+        }
+
+        /* Connection status */
+        #connection {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            z-index: 100;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .connected {
+            background: rgba(77, 255, 136, 0.2);
+            color: #4dff88;
+            border: 1px solid #4dff88;
+        }
+
+        .disconnected {
+            background: rgba(255, 68, 102, 0.2);
+            color: #ff4466;
+            border: 1px solid #ff4466;
+        }
+
+        .connecting {
+            background: rgba(255, 170, 68, 0.2);
+            color: #ffaa44;
+            border: 1px solid #ffaa44;
+        }
+
+        /* Error bar */
+        #error-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        #error-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #4dff88, #ffaa44, #ff4466);
+            transition: width 0.2s ease;
+        }
+
+        /* Info panel */
+        #info {
+            position: fixed;
+            bottom: 20px;
+            right: 16px;
+            z-index: 100;
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- HUD -->
+    <div id="hud">
+        <div class="hud-panel">
+            <div class="hud-title">🧠 Motor Cortex</div>
+            <div class="hud-row"><span class="hud-label">Tick</span><span class="hud-value" id="h-tick">0</span></div>
+            <div class="hud-row"><span class="hud-label">Action</span><span class="hud-value" id="h-action">IDLE</span>
+            </div>
+            <div class="hud-row"><span class="hud-label">Source</span><span class="hud-value" id="h-source">—</span>
+            </div>
+            <div class="hud-row"><span class="hud-label">Pred. Error</span><span class="hud-value"
+                    id="h-error">0.00</span></div>
+            <div class="hud-row"><span class="hud-label">Reward</span><span class="hud-value" id="h-reward">0.00</span>
+            </div>
+        </div>
+        <div class="hud-panel">
+            <div class="hud-title">🌍 Agent</div>
+            <div class="hud-row"><span class="hud-label">Position</span><span class="hud-value" id="h-pos">0, 0,
+                    0</span></div>
+            <div class="hud-row"><span class="hud-label">Grounded</span><span class="hud-value" id="h-ground">Yes</span>
+            </div>
+            <div class="hud-row"><span class="hud-label">Explored</span><span class="hud-value" id="h-explored">0</span>
+            </div>
+            <div class="hud-row"><span class="hud-label">Habits</span><span class="hud-value" id="h-habits">0</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="connection" class="connecting">⏳ Connecting...</div>
+
+    <div id="error-bar">
+        <div id="error-fill"></div>
+    </div>
+
+    <div id="info">
+        <div class="hud-panel" style="min-width: 200px;">
+            <div class="hud-title">Controls</div>
+            <div class="hud-row"><span class="hud-label">Orbit</span><span class="hud-value">Mouse drag</span></div>
+            <div class="hud-row"><span class="hud-label">Zoom</span><span class="hud-value">Scroll</span></div>
+            <div class="hud-row"><span class="hud-label">Mode</span><span class="hud-value">Autonomous</span></div>
+        </div>
+    </div>
+
+    <!-- Three.js -->
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.162.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.162.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // ========== WORLD CONFIG ==========
+        const WORLD_SIZE = 32;
+        const BLOCK_SIZE = 1;
+        const TICK_RATE = 10; // Hz
+        const AGENT_HEIGHT = 1.0;
+        const AGENT_RADIUS = 0.3;
+        const GRAVITY = -15;
+        const MOVE_SPEED = 3;
+        const TURN_SPEED = 90; // degrees/tick
+        const JUMP_FORCE = 7;
+        const RAYCAST_COUNT = 8;
+        const RAYCAST_RANGE = 10;
+        const GOAL_RESPAWN_TIME = 10000; // ms
+
+        // ========== SCENE SETUP ==========
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0a0a1a);
+        scene.fog = new THREE.FogExp2(0x0a0a1a, 0.02);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 200);
+        camera.position.set(20, 25, 30);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.2;
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.target.set(WORLD_SIZE / 2, 0, WORLD_SIZE / 2);
+
+        // ========== LIGHTING ==========
+        const ambient = new THREE.AmbientLight(0x334466, 0.6);
+        scene.add(ambient);
+
+        const sun = new THREE.DirectionalLight(0xffeedd, 1.2);
+        sun.position.set(30, 50, 20);
+        sun.castShadow = true;
+        sun.shadow.mapSize.set(2048, 2048);
+        sun.shadow.camera.near = 1;
+        sun.shadow.camera.far = 100;
+        sun.shadow.camera.left = -40;
+        sun.shadow.camera.right = 40;
+        sun.shadow.camera.top = 40;
+        sun.shadow.camera.bottom = -40;
+        scene.add(sun);
+
+        const pointLight = new THREE.PointLight(0x4488ff, 2, 30);
+        pointLight.position.set(WORLD_SIZE / 2, 10, WORLD_SIZE / 2);
+        scene.add(pointLight);
+
+        // ========== MATERIALS ==========
+        const materials = {
+            ground: new THREE.MeshStandardMaterial({
+                color: 0x2a3a2a, roughness: 0.9, metalness: 0.1
+            }),
+            platform: new THREE.MeshStandardMaterial({
+                color: 0x3a4a5a, roughness: 0.7, metalness: 0.2
+            }),
+            wall: new THREE.MeshStandardMaterial({
+                color: 0x4a3a3a, roughness: 0.8, metalness: 0.1
+            }),
+            agent: new THREE.MeshStandardMaterial({
+                color: 0x44aaff, roughness: 0.3, metalness: 0.6,
+                emissive: 0x1144aa, emissiveIntensity: 0.3
+            }),
+            eye: new THREE.MeshStandardMaterial({
+                color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.8
+            }),
+            pupil: new THREE.MeshStandardMaterial({
+                color: 0x000000
+            }),
+            goal: new THREE.MeshStandardMaterial({
+                color: 0x44ff88, emissive: 0x22ff44, emissiveIntensity: 0.5,
+                transparent: true, opacity: 0.8
+            }),
+            raycast: new THREE.LineBasicMaterial({
+                color: 0xff4444, transparent: true, opacity: 0.3
+            }),
+        };
+
+        // ========== WORLD GENERATION ==========
+        const blocks = [];
+        const blockMap = new Map(); // "x,y,z" -> block
+
+        function generateWorld() {
+            const geo = new THREE.BoxGeometry(BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE);
+
+            // Ground floor
+            for (let x = 0; x < WORLD_SIZE; x++) {
+                for (let z = 0; z < WORLD_SIZE; z++) {
+                    // Skip some cells for gaps
+                    if (isGap(x, z)) continue;
+                    addBlock(x, 0, z, materials.ground, geo);
+                }
+            }
+
+            // Platforms (raised areas)
+            const platforms = [
+                { x: 5, z: 5, w: 4, d: 4, h: 2 },
+                { x: 20, z: 10, w: 3, d: 6, h: 3 },
+                { x: 10, z: 22, w: 5, d: 3, h: 1 },
+                { x: 25, z: 25, w: 4, d: 4, h: 4 },
+            ];
+
+            for (const p of platforms) {
+                for (let x = p.x; x < p.x + p.w && x < WORLD_SIZE; x++) {
+                    for (let z = p.z; z < p.z + p.d && z < WORLD_SIZE; z++) {
+                        for (let y = 1; y <= p.h; y++) {
+                            addBlock(x, y, z, materials.platform, geo);
+                        }
+                    }
+                }
+            }
+
+            // Walls
+            const walls = [
+                { x: 15, z: 0, dx: 0, dz: 1, len: 8, h: 3 },
+                { x: 0, z: 15, dx: 1, dz: 0, len: 6, h: 2 },
+                { x: 28, z: 12, dx: 0, dz: 1, len: 10, h: 3 },
+            ];
+
+            for (const w of walls) {
+                for (let i = 0; i < w.len; i++) {
+                    const wx = w.x + w.dx * i;
+                    const wz = w.z + w.dz * i;
+                    for (let y = 1; y <= w.h; y++) {
+                        if (wx < WORLD_SIZE && wz < WORLD_SIZE) {
+                            addBlock(wx, y, wz, materials.wall, geo);
+                        }
+                    }
+                }
+            }
+        }
+
+        function isGap(x, z) {
+            // Create some gaps in the floor
+            if (x >= 12 && x <= 13 && z >= 5 && z <= 10) return true;
+            if (x >= 22 && x <= 23 && z >= 18 && z <= 20) return true;
+            return false;
+        }
+
+        function addBlock(x, y, z, mat, geo) {
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(x + 0.5, y + 0.5, z + 0.5);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            scene.add(mesh);
+            blocks.push(mesh);
+            blockMap.set(`${x},${y},${z}`, mesh);
+        }
+
+        function hasBlock(x, y, z) {
+            return blockMap.has(`${Math.floor(x)},${Math.floor(y)},${Math.floor(z)}`);
+        }
+
+        // Grid helper
+        const gridHelper = new THREE.GridHelper(WORLD_SIZE, WORLD_SIZE, 0x222233, 0x111122);
+        gridHelper.position.set(WORLD_SIZE / 2, 0.01, WORLD_SIZE / 2);
+        scene.add(gridHelper);
+
+        generateWorld();
+
+        // ========== AGENT ==========
+        const agentGroup = new THREE.Group();
+
+        // Body (capsule shape)
+        const bodyGeo = new THREE.CapsuleGeometry(AGENT_RADIUS, AGENT_HEIGHT - AGENT_RADIUS * 2, 8, 16);
+        const body = new THREE.Mesh(bodyGeo, materials.agent);
+        body.castShadow = true;
+        agentGroup.add(body);
+
+        // Eyes
+        const eyeGeo = new THREE.SphereGeometry(0.08, 8, 8);
+        const leftEye = new THREE.Mesh(eyeGeo, materials.eye);
+        leftEye.position.set(-0.12, 0.3, 0.25);
+        agentGroup.add(leftEye);
+
+        const rightEye = new THREE.Mesh(eyeGeo, materials.eye);
+        rightEye.position.set(0.12, 0.3, 0.25);
+        agentGroup.add(rightEye);
+
+        const pupilGeo = new THREE.SphereGeometry(0.04, 6, 6);
+        const leftPupil = new THREE.Mesh(pupilGeo, materials.pupil);
+        leftPupil.position.set(-0.12, 0.3, 0.3);
+        agentGroup.add(leftPupil);
+
+        const rightPupil = new THREE.Mesh(pupilGeo, materials.pupil);
+        rightPupil.position.set(0.12, 0.3, 0.3);
+        agentGroup.add(rightPupil);
+
+        // Agent glow
+        const glowLight = new THREE.PointLight(0x44aaff, 1, 5);
+        glowLight.position.set(0, 0, 0);
+        agentGroup.add(glowLight);
+
+        agentGroup.position.set(2, AGENT_HEIGHT / 2 + 1, 2);
+        scene.add(agentGroup);
+
+        // Agent physics state
+        const agent = {
+            position: new THREE.Vector3(2, AGENT_HEIGHT / 2 + 1, 2),
+            velocity: new THREE.Vector3(0, 0, 0),
+            rotation: 0, // degrees
+            isGrounded: false,
+        };
+
+        // ========== RAYCASTS (vision) ==========
+        const rayLines = [];
+        const raycaster = new THREE.Raycaster();
+
+        for (let i = 0; i < RAYCAST_COUNT; i++) {
+            const geo = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, 1)
+            ]);
+            const line = new THREE.Line(geo, materials.raycast);
+            scene.add(line);
+            rayLines.push(line);
+        }
+
+        // ========== GOALS ==========
+        let currentGoal = null;
+        const goalGeo = new THREE.OctahedronGeometry(0.5, 0);
+
+        function spawnGoal() {
+            if (currentGoal) scene.remove(currentGoal);
+
+            // Random position on the ground
+            let gx, gz;
+            do {
+                gx = Math.floor(Math.random() * (WORLD_SIZE - 4)) + 2;
+                gz = Math.floor(Math.random() * (WORLD_SIZE - 4)) + 2;
+            } while (isGap(gx, gz));
+
+            // Find highest block at this position
+            let gy = 1;
+            for (let y = 10; y >= 0; y--) {
+                if (hasBlock(gx, y, gz)) { gy = y + 1.5; break; }
+            }
+
+            currentGoal = new THREE.Mesh(goalGeo, materials.goal.clone());
+            currentGoal.position.set(gx + 0.5, gy, gz + 0.5);
+            currentGoal.castShadow = true;
+            scene.add(currentGoal);
+
+            return [gx + 0.5, gy, gz + 0.5];
+        }
+
+        let goalPos = spawnGoal();
+
+        // ========== PHYSICS ==========
+        const dt = 1 / TICK_RATE;
+
+        function physicsTick() {
+            // Gravity
+            if (!agent.isGrounded) {
+                agent.velocity.y += GRAVITY * dt;
+            }
+
+            // Apply velocity
+            agent.position.add(agent.velocity.clone().multiplyScalar(dt));
+
+            // Ground collision
+            const footX = Math.floor(agent.position.x);
+            const footZ = Math.floor(agent.position.z);
+            agent.isGrounded = false;
+
+            // Check blocks below
+            for (let y = Math.floor(agent.position.y); y >= 0; y--) {
+                if (hasBlock(footX, y, footZ)) {
+                    const blockTop = y + 1;
+                    if (agent.position.y - AGENT_HEIGHT / 2 <= blockTop + 0.05) {
+                        agent.position.y = blockTop + AGENT_HEIGHT / 2;
+                        agent.velocity.y = 0;
+                        agent.isGrounded = true;
+                    }
+                    break;
+                }
+            }
+
+            // Wall collision (simple AABB)
+            const checkY = Math.floor(agent.position.y);
+            for (let dy = 0; dy <= 1; dy++) {
+                // Check forward/backward/left/right
+                for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+                    const bx = Math.floor(agent.position.x + dx * AGENT_RADIUS * 1.5);
+                    const bz = Math.floor(agent.position.z + dz * AGENT_RADIUS * 1.5);
+                    if (hasBlock(bx, checkY + dy, bz)) {
+                        // Push back
+                        agent.position.x -= dx * 0.05;
+                        agent.position.z -= dz * 0.05;
+                        agent.velocity.x *= 0.5;
+                        agent.velocity.z *= 0.5;
+                    }
+                }
+            }
+
+            // Fell off world
+            if (agent.position.y < -5) {
+                agent.position.set(2, AGENT_HEIGHT / 2 + 3, 2);
+                agent.velocity.set(0, 0, 0);
+                sendToServer({ type: 'fell' });
+            }
+
+            // Friction
+            agent.velocity.x *= 0.85;
+            agent.velocity.z *= 0.85;
+
+            // Update visual
+            agentGroup.position.copy(agent.position);
+            agentGroup.rotation.y = THREE.MathUtils.degToRad(-agent.rotation);
+        }
+
+        // ========== MOTOR ACTIONS ==========
+        function executeAction(action) {
+            const rad = THREE.MathUtils.degToRad(agent.rotation);
+
+            switch (action) {
+                case 'MOVE_FORWARD':
+                    agent.velocity.x += Math.sin(rad) * MOVE_SPEED * dt * 5;
+                    agent.velocity.z += Math.cos(rad) * MOVE_SPEED * dt * 5;
+                    break;
+                case 'MOVE_BACK':
+                    agent.velocity.x -= Math.sin(rad) * MOVE_SPEED * dt * 5;
+                    agent.velocity.z -= Math.cos(rad) * MOVE_SPEED * dt * 5;
+                    break;
+                case 'MOVE_LEFT':
+                    agent.velocity.x += Math.cos(rad) * MOVE_SPEED * dt * 5;
+                    agent.velocity.z -= Math.sin(rad) * MOVE_SPEED * dt * 5;
+                    break;
+                case 'MOVE_RIGHT':
+                    agent.velocity.x -= Math.cos(rad) * MOVE_SPEED * dt * 5;
+                    agent.velocity.z += Math.sin(rad) * MOVE_SPEED * dt * 5;
+                    break;
+                case 'TURN_LEFT':
+                    agent.rotation -= TURN_SPEED * dt;
+                    break;
+                case 'TURN_RIGHT':
+                    agent.rotation += TURN_SPEED * dt;
+                    break;
+                case 'JUMP':
+                    if (agent.isGrounded) {
+                        agent.velocity.y = JUMP_FORCE;
+                        agent.isGrounded = false;
+                    }
+                    break;
+                case 'IDLE':
+                default:
+                    break;
+            }
+        }
+
+        // ========== SENSOR DATA ==========
+        function getSensorData() {
+            // Vision raycasts
+            const vision = [];
+            const origin = agent.position.clone();
+            origin.y += 0.3; // Eye level
+
+            for (let i = 0; i < RAYCAST_COUNT; i++) {
+                const angle = agent.rotation + (i - RAYCAST_COUNT / 2) * 20; // 20° spread
+                const rad = THREE.MathUtils.degToRad(angle);
+                const dir = new THREE.Vector3(Math.sin(rad), 0, Math.cos(rad));
+
+                raycaster.set(origin, dir);
+                raycaster.far = RAYCAST_RANGE;
+                const hits = raycaster.intersectObjects(blocks);
+
+                let visionEntry = { distance: RAYCAST_RANGE, type: "nothing" };
+                if (hits.length > 0) {
+                    visionEntry = {
+                        distance: hits[0].distance,
+                        type: "block",
+                        color: "#" + hits[0].object.material.color.getHexString(),
+                    };
+                }
+                vision.push(visionEntry);
+
+                // Update raycast visualization
+                const end = origin.clone().add(dir.multiplyScalar(visionEntry.distance));
+                const positions = rayLines[i].geometry.attributes.position;
+                positions.setXYZ(0, origin.x, origin.y, origin.z);
+                positions.setXYZ(1, end.x, end.y, end.z);
+                positions.needsUpdate = true;
+            }
+
+            // Touching
+            const touching = [];
+            const checkDirs = [
+                ['north', 0, 1], ['south', 0, -1],
+                ['east', 1, 0], ['west', -1, 0]
+            ];
+            for (const [name, dx, dz] of checkDirs) {
+                const bx = Math.floor(agent.position.x + dx * (AGENT_RADIUS + 0.2));
+                const bz = Math.floor(agent.position.z + dz * (AGENT_RADIUS + 0.2));
+                const by = Math.floor(agent.position.y);
+                if (hasBlock(bx, by, bz) || hasBlock(bx, by + 1, bz)) {
+                    touching.push(`wall_${name}`);
+                }
+            }
+
+            // Goal proximity reward
+            let reward = 0;
+            if (currentGoal) {
+                const goalDist = agent.position.distanceTo(currentGoal.position);
+                if (goalDist < 1.5) {
+                    reward = 1.0;
+                    goalPos = spawnGoal(); // Respawn
+                    sendToServer({ type: 'goal_reached' });
+                }
+            }
+
+            return {
+                position: [agent.position.x, agent.position.y, agent.position.z],
+                velocity: [agent.velocity.x, agent.velocity.y, agent.velocity.z],
+                rotation: agent.rotation,
+                is_grounded: agent.isGrounded,
+                vision: vision,
+                touching: touching,
+                reward: reward,
+            };
+        }
+
+        // ========== WEBSOCKET ==========
+        let ws = null;
+        let wsConnected = false;
+        let reconnectTimer = null;
+        let lastMotorStatus = {};
+
+        function connectWS() {
+            const connEl = document.getElementById('connection');
+            connEl.className = 'connecting';
+            connEl.textContent = '⏳ Connecting...';
+
+            try {
+                ws = new WebSocket('ws://localhost:8765');
+
+                ws.onopen = () => {
+                    wsConnected = true;
+                    connEl.className = 'connected';
+                    connEl.textContent = '🟢 Brain Connected';
+                    // Send goal info
+                    if (goalPos) {
+                        ws.send(JSON.stringify({
+                            type: 'world_info',
+                            goals: [goalPos]
+                        }));
+                    }
+                };
+
+                ws.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'command') {
+                        executeAction(data.action);
+                        updateHUD(data);
+                    } else if (data.type === 'motor_status') {
+                        lastMotorStatus = data;
+                        updateMotorHUD(data);
+                    }
+                };
+
+                ws.onclose = () => {
+                    wsConnected = false;
+                    connEl.className = 'disconnected';
+                    connEl.textContent = '🔴 Disconnected';
+                    reconnectTimer = setTimeout(connectWS, 3000);
+                };
+
+                ws.onerror = () => {
+                    wsConnected = false;
+                };
+            } catch (e) {
+                connEl.className = 'disconnected';
+                connEl.textContent = '🔴 Cannot connect';
+                reconnectTimer = setTimeout(connectWS, 3000);
+            }
+        }
+
+        function sendToServer(data) {
+            if (ws && wsConnected) {
+                ws.send(JSON.stringify(data));
+            }
+        }
+
+        // ========== HUD UPDATE ==========
+        function updateHUD(cmd) {
+            document.getElementById('h-tick').textContent = cmd.tick || 0;
+            document.getElementById('h-action').textContent = cmd.action || 'IDLE';
+            document.getElementById('h-source').textContent = cmd.source || '—';
+
+            const error = cmd.prediction_error || 0;
+            const errorEl = document.getElementById('h-error');
+            errorEl.textContent = error.toFixed(3);
+            errorEl.className = 'hud-value ' + (error < 0.3 ? 'good' : error < 0.6 ? 'warn' : 'bad');
+
+            document.getElementById('error-fill').style.width = `${Math.min(error * 100, 100)}%`;
+
+            const reward = cmd.reward || 0;
+            const rewEl = document.getElementById('h-reward');
+            rewEl.textContent = reward.toFixed(2);
+            rewEl.className = 'hud-value ' + (reward > 0 ? 'good' : reward < 0 ? 'bad' : '');
+
+            // Agent panel
+            const p = agent.position;
+            document.getElementById('h-pos').textContent =
+                `${p.x.toFixed(1)}, ${p.y.toFixed(1)}, ${p.z.toFixed(1)}`;
+            document.getElementById('h-ground').textContent = agent.isGrounded ? 'Yes' : 'No';
+        }
+
+        function updateMotorHUD(status) {
+            document.getElementById('h-explored').textContent = status.positions_visited || 0;
+            document.getElementById('h-habits').textContent = status.habits_formed || 0;
+        }
+
+        // ========== TICK LOOP ==========
+        let tickAccumulator = 0;
+        const TICK_INTERVAL = 1000 / TICK_RATE;
+
+        function motorTick() {
+            physicsTick();
+
+            if (wsConnected && ws) {
+                const sensorData = getSensorData();
+                ws.send(JSON.stringify({ type: 'sensor', data: sensorData }));
+
+                // Periodically request motor status
+                if (Math.random() < 0.1) {
+                    ws.send(JSON.stringify({ type: 'status_request' }));
+                }
+
+                // Send goal updates
+                if (goalPos && Math.random() < 0.05) {
+                    ws.send(JSON.stringify({
+                        type: 'world_info',
+                        goals: [goalPos]
+                    }));
+                }
+            }
+        }
+
+        // ========== ANIMATION LOOP ==========
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const delta = clock.getDelta() * 1000; // ms
+            tickAccumulator += delta;
+
+            while (tickAccumulator >= TICK_INTERVAL) {
+                motorTick();
+                tickAccumulator -= TICK_INTERVAL;
+            }
+
+            // Animate goal
+            if (currentGoal) {
+                currentGoal.rotation.y += 0.02;
+                currentGoal.position.y += Math.sin(Date.now() * 0.003) * 0.003;
+            }
+
+            // Agent glow pulses with prediction error
+            const errorIntensity = parseFloat(document.getElementById('h-error').textContent) || 0;
+            glowLight.intensity = 0.5 + errorIntensity * 2;
+            glowLight.color.setHex(errorIntensity > 0.5 ? 0xff4444 : 0x44aaff);
+
+            // Agent emissive based on source
+            const source = document.getElementById('h-source').textContent;
+            if (source === 'habit') {
+                materials.agent.emissive.setHex(0x22aa44); // Green = automatic
+            } else if (source === 'plan') {
+                materials.agent.emissive.setHex(0xaa8822); // Yellow = planning
+            } else if (source === 'basal_ganglia') {
+                materials.agent.emissive.setHex(0x1144aa); // Blue = RL
+            } else {
+                materials.agent.emissive.setHex(0x441144); // Purple = exploring
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // ========== RESIZE ==========
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // ========== START ==========
+        connectWS();
+        animate();
+
+        // Auto-respawn goals
+        setInterval(() => {
+            if (!currentGoal || !currentGoal.parent) {
+                goalPos = spawnGoal();
+                if (wsConnected && ws) {
+                    ws.send(JSON.stringify({ type: 'world_info', goals: [goalPos] }));
+                }
+            }
+        }, GOAL_RESPAWN_TIME);
+    </script>
+</body>
+
+</html>

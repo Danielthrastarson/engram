@@ -1,0 +1,20 @@
+# Engram System - Docker Compose (Phase 12)
+
+version: '3.8'
+
+services:
+  engram:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/api/evolution/status')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
